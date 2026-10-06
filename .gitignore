@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+Tools/.venv/
+*.xcresult
+/docs/
+DerivedData/
+.xcdd/
+.xcdd-rel/
+.xcdd-app/
+*.profraw
+/Tests/Fixtures/

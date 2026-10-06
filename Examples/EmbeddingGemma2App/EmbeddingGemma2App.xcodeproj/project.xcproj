@@ -1,0 +1,66 @@
+{
+  "default-configuration": "Release",
+  "configurations": [
+    "Debug",
+    "Release",
+  ],
+  "localizations": {
+    "development": "en",
+  },
+  "packages": [
+    {
+      "kind": "local",
+      "path": "../..",
+    },
+  ],
+  "files": [
+    { "kind": "folder", "path": "EmbeddingGemma2App", "target-membership": [ "EmbeddingGemma2App" ] },
+    {
+      "kind": "group",
+      "name": "Products",
+      "children": [
+        { "path": "<PRODUCTS>/EmbeddingGemma2App.app", "type": "wrapper.application" },
+      ],
+    },
+  ],
+  "targets": [
+    {
+      "name": "EmbeddingGemma2App",
+      "id": "EMBEDDINGGEMMA2APP",
+      "product": "Products/EmbeddingGemma2App.app",
+      "product-type": "application",
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources",
+      ],
+      "package-product-members": [
+        {
+          "product-name": "MLXEmbeddingGemma2",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+      "build-settings": {
+        "CODE_SIGN_IDENTITY": "-",
+        "CODE_SIGN_STYLE": "Manual",
+        "CURRENT_PROJECT_VERSION": "1",
+        "ENABLE_APP_SANDBOX": "NO",
+        "ENABLE_HARDENED_RUNTIME": "NO",
+        "GENERATE_INFOPLIST_FILE": "YES",
+        "INFOPLIST_KEY_CFBundleDisplayName": "EmbeddingGemma 2",
+        "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.developer-tools",
+        "MARKETING_VERSION": "1.0",
+        "PRODUCT_BUNDLE_IDENTIFIER": "com.mnmly.EmbeddingGemma2App",
+        "PRODUCT_NAME": "$(TARGET_NAME)",
+        "SWIFT_VERSION": "6.0",
+      },
+    },
+  ],
+  "build-settings": {
+    "ALWAYS_SEARCH_USER_PATHS": "NO",
+    "ARCHS": "arm64",
+    "MACOSX_DEPLOYMENT_TARGET": "14.0",
+    "SDKROOT": "macosx",
+    "SWIFT_EMIT_LOC_STRINGS": "YES",
+  },
+}

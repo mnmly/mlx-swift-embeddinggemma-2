@@ -1,0 +1,15 @@
+[project]
+name = "embeddinggemma2-fixtures"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "mlx>=0.32.3",
+    "mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm.git@3d87e88402f307efbf68e568971aa887ee7d9ed0",
+    "transformers>=5.19.0",
+    "torch>=2.8",
+    "torchvision",
+    "numpy",
+    "pillow",
+    "safetensors",
+    "av",
+]
