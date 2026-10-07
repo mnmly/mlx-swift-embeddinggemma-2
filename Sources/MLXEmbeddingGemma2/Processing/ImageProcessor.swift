@@ -22,18 +22,28 @@ public struct RGBImage: Sendable {
 
     /// Decodes `image` into RGB bytes without color conversion when it is already RGB
     /// (matching PIL's `convert("RGB")`), otherwise via sRGB. Alpha is dropped (composited on black).
+    ///
+    /// Some RGB spaces can't back an 8-bit bitmap context — input-only ICC profiles (scanner
+    /// profiles report `supportsOutput == false`) and extended-range spaces such as Extended sRGB —
+    /// so those images are converted to sRGB instead.
     public init(_ image: CGImage) {
         let width = image.width, height = image.height
-        let space = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil }
-            ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        var spaces = [srgb]
+        if let own = image.colorSpace, own.model == .rgb, own.supportsOutput { spaces.insert(own, at: 0) }
         var rgba = [UInt8](repeating: 0, count: width * height * 4)
         rgba.withUnsafeMutableBytes { buffer in
-            let ctx = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: space,
-                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
-            ctx.interpolationQuality = .none
-            ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            // An 8-bit sRGB RGBX context always exists for a real image size, so the loop draws once.
+            for space in spaces {
+                guard let ctx = CGContext(
+                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                    bytesPerRow: width * 4, space: space,
+                    bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+                else { continue }
+                ctx.interpolationQuality = .none
+                ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+                return
+            }
         }
         var rgb = [UInt8](repeating: 0, count: width * height * 3)
         for i in 0 ..< width * height {
