@@ -141,5 +141,6 @@ even when run in parallel across inputs.
 
 ## Licenses
 
+- This port: Apache-2.0 (see [LICENSE](LICENSE)).
 - Model weights: Apache-2.0 (Google).
 - Reference implementations: mlx-vlm (MIT) and transformers (Apache-2.0).
