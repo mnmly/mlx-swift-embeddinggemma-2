@@ -30,6 +30,9 @@ final class TokenStatesTests: XCTestCase {
         let img = try XCTUnwrap(sa.images.first)
         XCTAssertEqual(img.gridWidth * img.gridHeight, img.tokens.count)
         XCTAssertTrue(img.tokens.allSatisfy { sa.tokenIds[$0] == session.model.configuration.imageTokenId })
+        // Pre-encoder soft tokens: one row per cell.
+        XCTAssertGreaterThan(img.visionDimension, 0)
+        XCTAssertEqual(img.visionStates.count, img.tokens.count * img.visionDimension)
 
         // Exact decomposition: per-token shares sum to the cosine.
         let eb = try await session.embed(b)

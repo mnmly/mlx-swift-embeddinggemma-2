@@ -41,6 +41,15 @@ public struct TokenStates: Sendable {
         /// Side, in pixels of the resized image, of the square cell each soft token pools
         /// (`patchSize · poolingKernelSize`).
         public let cellSize: Int
+        /// Row-major `[tokens.count × visionDimension]` soft tokens as the vision tower (plus its
+        /// projection) hands them to the text encoder, float32.
+        ///
+        /// Unlike ``TokenStates/states``, these have not been through the text encoder's attention, so
+        /// each row still describes its own cell of the image — use them to ask *where* two images
+        /// correspond, and ``TokenStates/contributions(toward:)`` to ask what carries the embedding.
+        public let visionStates: [Float]
+        /// Width of each ``visionStates`` row.
+        public let visionDimension: Int
     }
 
     /// Each token's share of the cosine between this input and `other`.
@@ -73,7 +82,17 @@ extension EmbeddingSession {
     /// - Throws: Preprocessing or model errors for this input.
     public func tokenStates(_ input: EmbeddingInput) throws -> TokenStates {
         let prepared = try processor.prepare(input)
-        let output = try model(processor.collate([prepared]))
+        let batch = processor.collate([prepared])
+        let output = try model(batch)
+        // The images' soft tokens before the text encoder (same batch, so same preprocessing).
+        var vision: MLXArray?
+        if let pixels = batch.pixelValues, let positions = batch.imagePositionIds {
+            vision = try model.imageFeatures(pixels, positions: positions, counts: batch.imageTokenCounts)
+                .asType(.float32)
+        }
+        if let vision { eval(vision) }
+        let visionRows = vision?.asArray(Float.self) ?? []
+        let visionDim = vision?.dim(1) ?? 0
         let hidden = output.lastHiddenState[0].asType(.float32)          // [L, D]
         let mean = hidden.mean(axis: 0)
         let norm = MLX.sqrt((mean * mean).sum())
@@ -92,7 +111,9 @@ extension EmbeddingSession {
         }
         let k = processor.image.poolingKernelSize
         var images: [TokenStates.ImageTokens] = []
+        var visionOffset = 0                                   // images are concatenated in order
         for (run, image) in zip(runs, prepared.images) {
+            defer { visionOffset += run.count }
             var maxX: Int32 = -1, maxY: Int32 = -1
             for p in stride(from: 0, to: image.positions.count, by: 2) where image.positions[p] >= 0 {
                 maxX = max(maxX, image.positions[p])
@@ -100,8 +121,11 @@ extension EmbeddingSession {
             }
             let w = (Int(maxX) + 1) / k, h = (Int(maxY) + 1) / k
             guard w * h == run.count else { continue }       // layout mismatch: leave the image out
+            let lo = visionOffset * visionDim, hi = (visionOffset + run.count) * visionDim
+            let rows = hi <= visionRows.count ? Array(visionRows[lo ..< hi]) : []
             images.append(.init(tokens: run, gridWidth: w, gridHeight: h,
-                                cellSize: processor.image.patchSize * k))
+                                cellSize: processor.image.patchSize * k,
+                                visionStates: rows, visionDimension: rows.isEmpty ? 0 : visionDim))
         }
         return TokenStates(
             states: hidden.asArray(Float.self), dimension: hidden.dim(1), tokenIds: ids, images: images,
